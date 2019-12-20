@@ -54,15 +54,16 @@ class create_sudoku:
         self.sudo_num = list(range(1, 10))
         # 将学号移动到前列
         self.sudo_num.remove(5)
-        # 记录当前第一行
-        self.first_row = [5] + self.sudo_num
         # 记录当前生成的个数
         self.cur = 0
         # 记录终局
         self.perm = []
     
-        print("num:"+str(num))
+        # print("num:"+str(num))
         while self.cur < num:
+            #记录第一行
+            self.first_row = [5] + self.sudo_num
+            # print(self.first_row)
             temp_row = []
             for i in move_way:
                 # print("Create sudoku "+str(self.cur))
@@ -114,5 +115,6 @@ class create_sudoku:
             start += 1
             end -= 1
 
-# num = 5
+
+# num = 61
 # create_sudoku(num)
