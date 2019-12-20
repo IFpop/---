@@ -65,32 +65,32 @@ class create_sudoku:
         while self.cur < num:
             temp_row = []
             for i in move_way:
-                print("Create sudoku "+str(self.cur))
+                # print("Create sudoku "+str(self.cur))
                 self.perm.append([])
-                print("current change"+str(i))
+                # print("current change"+str(i))
                 for j in range(9):
                     # print("first row:")
                     # print(self.first_row)
                     # print(i[j], end="")
                     temp_row = self.first_row[(9-i[j]):9]+self.first_row[0:(9-i[j])]
-                    print(temp_row)
+                    # print(temp_row)
                     self.perm[self.cur].append(temp_row)
                 # print(self.cur)
                 # print(self.perm[self.cur])
                 self.cur = self.cur + 1
                 if self.cur == num:
-                    breakclear
+                    break
                     
             self.nextPermutation(self.sudo_num)
         
         #写入文件
         with open("sudoku.txt","w") as f:
-            print("write file...\n")
+            # print("write file...\n")
             length = len(self.perm)
             for i in range(length):
                 for j in range(9):
                     f.write(("%s\n" % self.perm[i][j]).replace('[','').replace(']','').replace(',',''))
-                f.write("x\n")
+                f.write("\n")
 
     def nextPermutation(self, nums):
         if len(nums) < 2:
@@ -114,5 +114,5 @@ class create_sudoku:
             start += 1
             end -= 1
 
-num = 5
-create_sudoku(num)
+# num = 5
+# create_sudoku(num)
