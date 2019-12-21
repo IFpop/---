@@ -4,6 +4,7 @@
 
 import sudoku_generate
 import sudo_solve
+# import test
 from copy import deepcopy
 import sys
 import time
@@ -45,14 +46,18 @@ try:
                 elif num == 9 or line[0] == '\n':
                     line = f.readline()
                     num = 0
-                    sudo = sudo_solve.Solve_sudoku(sudoku)
+                    sudo = sudo_solve.Solve_sudo(sudoku)
+                    # sudo = test.Solve_sudo(sudoku)
                     print(u"完成，猜测了%s次" % sudo.guess_times)
                     print(sudo.value)
                     sudoku = []
             # 最后一个
-            sudo = sudo_solve.Solve_sudoku(sudoku)
+            sudo = sudo_solve.Solve_sudo(sudoku)
+            # sudo = test.Solve_sudo(sudoku)
             print(u"完成，猜测了%s次" % sudo.guess_times)
+            end = end = time.process_time()
             print(sudo.value)
+            print("running time is %6.4f" % (end-start))
 
 
 except ValueError:
