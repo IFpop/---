@@ -39,7 +39,9 @@ class Solve_sudo:
                 else:
                     self.value[row][col] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
         # print(self.value)
+        self.sudo_solve()
 
+    #排除
     def sudo_exclude(self):
         type_same = True
         type_one = True
@@ -186,7 +188,6 @@ class Solve_sudo:
                                             # f'block compare row: answer={self.value[row, col]} at {(row, col)}')
                                             self.value[row, col] = item[0]
                                             return True
-
                     elif len(set(cols)) == 1:
                         # 同一列
                         result = list(
@@ -207,3 +208,145 @@ class Solve_sudo:
                                             # f'block compare col: answer={self.value[row, col]} at {(row, col)}')
                                             self.value[row, col] = item[0]
                                             return True
+
+    # 得到有多少个确定的数字
+    def get_num_count(self):
+        num = 0
+        for i in self.value.reshape(1, -1)[0]:
+            if(isinstance(i,int)):
+                num += 1
+        return num
+    
+    #评分，找到最佳的猜测坐标
+    def get_best_point(self):
+        best_score = 0
+        best_point = (0,0)
+
+        for row in range(9):
+            for col in range(9):
+                point_score = self.get_point_score((row,col))
+                if(best_score < point_score):
+                    best_score = point_score
+                    best_point = (row,col)
+        return best_point
+
+    def get_point_score(self,point):
+        # 评分标准 (10-候选个数) + 同行确定数字个数 + 同列确定数字个数
+        row, col = point
+        item = self.value[row][col]
+
+        if isinstance(item, list):
+            score = 10 - len(item)
+            for x in self.value[row]:
+                if(isinstance(x,int)):
+                    score += 1
+            for x in self.value[:,col]:
+                if(isinstance(x,int)):
+                    score += 1
+            return score
+        else:
+            return 0
+    
+    #验证有没错误
+    def check_value(self):
+        #行
+        r = 0
+        for row in self.value:
+            nums = []
+            lists = []
+            for item in row:
+                if(isinstance(item,list)):
+                    lists.append(item)
+                else:
+                    nums.append(item)
+            if(len(set(nums)) != len(nums)):
+                return False
+            if len(list(filter(lambda x: len(x) == 0, lists))):
+                return False 
+            r += 1
+        
+        #列
+        for c in range(9):
+            nums = []
+            lists = []
+            col = self.value[:,c]
+            for item in col:
+                if(isinstance(item,list)):
+                    lists.append(item)
+                else:
+                    nums.append(item)
+            if len(set(nums)) != len(nums):
+                return False
+            if len(list(filter(lambda x: len(x) == 0, lists))):
+                return False
+        
+        #九宫格
+        for b_r, b_c in self.base_points:
+            nums = []
+            lists = []
+            block = self.value[b_r:b_r + 3, b_c:b_c + 3].reshape(1, -1)[0]
+
+            for item in block:
+                if(isinstance(item,list)):
+                    lists.append(item)
+                else:
+                    nums.append(item)
+            if len(set(nums)) != len(nums):
+                return False
+            if len(list(filter(lambda x: len(x) == 0, lists))):
+                return False 
+        return True
+    
+    # 猜测记录
+    def record_guess(self, point, index=0):
+        # 记录
+        recorder = Recorder()
+        recorder.point = point
+        recorder.point_index = index
+        # recorder.value = self.value.copy() #numpy的copy不行
+        recorder.value = deepcopy(self.value)
+        self.recorder.put(recorder)
+        self.guess_times += 1  # 记录猜测次数
+
+        # 新一轮的排除处理
+        item = self.value[point]
+        # assume only 1 in this point
+        self.value[point] = item[index]
+        self.new_points.put(point)
+        self.sudo_exclude()
+    
+    def recall(self):
+        while True:
+            if(self.recorder.empty()):
+                raise Exception('Sudoku is wroing, no answer!')
+            else:
+                recorder = self.recorder.get()
+                point = recorder.point
+                index = recorder.point_index+1
+                item = recorder.value[point]
+
+                #判断索引是否超出范围
+                # if no exceed,则再回溯一次
+                if(index < len(item)):
+                    break
+                #if exceed,pop next recorder
+        self.value = recorder.value
+        self.record_guess(point,index)
+
+    #main function解题
+    def sudo_solve(self):
+        #第一次解题，排除法
+        self.sudo_exclude()
+
+        #检查有没有错误，有错误则回溯，没错误却未解开题目，则再猜测
+        while True:
+            if(self.check_value()):
+                fixed_answer = self.get_num_count()
+                if(fixed_answer == 81):
+                    break
+                else:
+                    #获取最佳猜测点
+                    point = self.get_best_point()
+                    self.record_guess(point)
+            else:
+                self.recall()
