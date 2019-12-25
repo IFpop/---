@@ -1,12 +1,11 @@
-# -*-coding=utf-*-
+#coding=utf
 #owner: IFpop
 #time: 2019/12/21
-# reference: u"杨仕航" http://yshblog.com/blog/74
 
 import numpy as np
 from queue import Queue, LifoQueue
 from copy import deepcopy
-
+import time
 
 class Recorder:
     point = None  # 进行猜测的点
@@ -15,33 +14,46 @@ class Recorder:
 
 
 class Solve_sudo:
+    '''
+    Solve sudoku class:
+         def __init__
+         def sudo_solve
+         def sudo_exclude
+    '''
     def __init__(self, data):
         # 将data进行整理
-        sudoku = np.array(data)
+        self.sudoku = np.array(data)
+        self.runtime = 0
 
         # 数据初始化(二维的object数组)
         self.value = np.array([[0] * 9] * 9, dtype=object)  # 数独的值，包括未解决和已解决的
-        self.new_points = Queue()  # 先进先出，新解（已解决值）的坐标
+        self.know_points = Queue()  # 先进先出，新解（已解决值）的坐标
         self.recorder = LifoQueue()  # 先进后出，回溯器
+
+        self.recorder_point = None     #进行猜测的点
+        self.recorder_point_index = 0  #猜测候选列表使用的值的索引
+        self.recorder_value = None     #回溯记录的值
         self.guess_times = 0  # 猜测次数
 
-        # 九宫格的基准列表
-        self.base_points = [[0, 0], [0, 3], [0, 6], [
-            3, 0], [3, 3], [3, 6], [6, 0], [6, 3], [6, 6]]
+        # 九宫格的基准元组，将列表变为元组会使速度上升
+        self.base_points = ((0,0),(0,3),(0,6),(3,0),(3,3),(3,6),(6,0),(6,3),(6,6))
 
         # 对数独进行处理
         for row in range(9):
             for col in range(9):
-                if sudoku[row][col]:  # 如果是已确定点
-                    self.value[row][col] = int(sudoku[row][col])
+                if self.sudoku[row][col]:  # 如果是已确定点
+                    self.value[row][col] = int(self.sudoku[row][col])
                     # 新的确认的值添加到列表中，以便遍历
-                    self.new_points.put((row, col))
+                    self.know_points.put((row, col))
                 else:
                     self.value[row][col] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
         # print(self.value)
+        start = time.time()
         self.sudo_solve()
+        end = time.time()
+        self.runtime = end -start
 
-    #排除
+    #采用合适的算法，排除候选
     def sudo_exclude(self):
         type_same = True
         type_one = True
@@ -49,23 +61,21 @@ class Solve_sudo:
         while type_same:
             while type_one:
                 # 剔除数字
-                while not self.new_points.empty():
-                    point = self.new_points.get()  # 先进先出
-                    self.cut_num(point)
+                while not self.know_points.empty():
+                    point = self.know_points.get()  # 先进先出
+                    self.remove_konw_num(point)
 
-                # 检查List里值为单个数字的情况，如有新answer则加入new_points Queue，立即cut_num
-                type_one = self.check_one_possible()
+                # 检查List里值为单个数字的情况，如有新answer则加入know_points Queue，立即cut_num
+                type_one = self.Only_one_exisitence()
 
             # 检查同行或列的情况
-            type_same = self.check_same_num()
+            type_same = self.Hidden_exclusion()
             type_one = True
 
-    # 解题
-    def solve(self):
-        # 第一次解题，排除法
-        self.sudo_exclude()
-
-    def cut_num(self, point):
+    '''
+    Remove the numbers in the candidate codes in the row, column and nine palace lattice according to each determined point
+    '''
+    def remove_konw_num(self, point):
         # 获取该点的横纵列坐标
         row, col = point
         # 通过坐标获取对应值
@@ -79,7 +89,7 @@ class Solve_sudo:
                     item.remove(val)  # 移除
                     # 判断移除后，是否剩下一个元素
                     if(len(item) == 1):
-                        self.new_points.put((row, i))  # 添加该坐标到已解决
+                        self.know_points.put((row, i))  # 添加该坐标到已解决
                         self.value[row][i] = item[0]
         # 检查列
         for i, item in enumerate(self.value[:, col]):
@@ -89,7 +99,7 @@ class Solve_sudo:
 
                     # 判断移除后，是否剩下一个元素
                     if len(item) == 1:
-                        self.new_points.put((i, col))
+                        self.know_points.put((i, col))
                         self.value[i][col] = item[0]
         # 检查九宫格
         # 先找到九宫格基准点，也就是3×3数组的左上角的点
@@ -106,11 +116,13 @@ class Solve_sudo:
                         if len(item) == 1:
                             r = bp_row + m_r
                             c = bp_col + m_c
-                            self.new_points.put((r, c))
+                            self.know_points.put((r, c))
                             self.value[r][c] = item[0]
 
-    # 对于一类可直接确定其他行，列或九宫格中没有的，可直接确定该点
-    def check_one_possible(self):
+    '''
+    For a class that can directly determine other rows, columns or nine palace cells, the point can be directly determined
+    '''
+    def Only_one_exisitence(self):
         # 同一行只有一个数字的情况
         for row in range(9):
             # 只取出的是这一行是list格子
@@ -121,7 +133,7 @@ class Solve_sudo:
                     for value in item:  # 对其中的每个元素判断，如果只出现一次则确定
                         if(sum(map(lambda x: x.count(value), vals)) == 1):
                             self.value[row][col] = value
-                            self.new_points.put((row, col))
+                            self.know_points.put((row, col))
                             return True
         # 对于列
         for col in range(0, 9):
@@ -133,7 +145,7 @@ class Solve_sudo:
                     for value in item:
                         if(sum(map(lambda x: x.count(value), vals)) == 1):
                             self.value[row][col] = value
-                            self.new_points.put((row, col))
+                            self.know_points.put((row, col))
                             return True
 
         # 对于九宫格
@@ -147,11 +159,13 @@ class Solve_sudo:
                         for value in item:
                             if(sum(map(lambda x: x.count(value), vals)) == 1):
                                 self.value[row + m_r, col + m_c] = value
-                                self.new_points.put((row + m_r, col + m_c))
+                                self.know_points.put((row + m_r, col + m_c))
                                 return True
 
-    # 九宫格内同行列隐性排除
-    def check_same_num(self):
+    '''
+    Invisible elimination of the same row in the nine palace grid
+    '''
+    def Hidden_exclusion(self):
         for bp_r, bp_c in self.base_points:
             block = self.value[bp_r:bp_r + 3, bp_c:bp_c + 3]
 
@@ -183,9 +197,7 @@ class Solve_sudo:
 
                                         # 判断移除后，是否剩下一个元素
                                         if len(item) == 1:
-                                            self.new_points.put((row, col))
-                                            # Logger.debug(
-                                            # f'block compare row: answer={self.value[row, col]} at {(row, col)}')
+                                            self.know_points.put((row, col))
                                             self.value[row, col] = item[0]
                                             return True
                     elif len(set(cols)) == 1:
@@ -203,20 +215,11 @@ class Solve_sudo:
 
                                         # 判断移除后，是否剩下一个元素
                                         if len(item) == 1:
-                                            self.new_points.put((row, col))
-                                            # Logger.debug(
-                                            # f'block compare col: answer={self.value[row, col]} at {(row, col)}')
+                                            self.know_points.put((row, col))
                                             self.value[row, col] = item[0]
                                             return True
-
-    # 得到有多少个确定的数字
-    def get_num_count(self):
-        num = 0
-        for i in self.value.reshape(1, -1)[0]:
-            if(isinstance(i,int)):
-                num += 1
-        return num
-    
+                    
+        
     #评分，找到最佳的猜测坐标
     def get_best_point(self):
         best_score = 0
@@ -312,10 +315,10 @@ class Solve_sudo:
         item = self.value[point]
         # assume only 1 in this point
         self.value[point] = item[index]
-        self.new_points.put(point)
+        self.know_points.put(point)
         self.sudo_exclude()
     
-    def recall(self):
+    def reback(self):
         while True:
             if(self.recorder.empty()):
                 raise Exception('Sudoku is wroing, no answer!')
@@ -337,11 +340,13 @@ class Solve_sudo:
     def sudo_solve(self):
         #第一次解题，排除法
         self.sudo_exclude()
-
         #检查有没有错误，有错误则回溯，没错误却未解开题目，则再猜测
         while True:
             if(self.check_value()):
-                fixed_answer = self.get_num_count()
+                fixed_answer = 0
+                for i in self.value.reshape(1, -1)[0]:
+                    if(isinstance(i,int)):
+                        fixed_answer += 1
                 if(fixed_answer == 81):
                     break
                 else:
@@ -349,4 +354,4 @@ class Solve_sudo:
                     point = self.get_best_point()
                     self.record_guess(point)
             else:
-                self.recall()
+                self.reback()
