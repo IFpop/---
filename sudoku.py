@@ -27,43 +27,10 @@ def main():
             start = time.process_time()
             # 第二个参数应该是数独文件路径
             path = sys.argv[2]
-            # 打开文件
-            with open(path, 'r') as f:
-                line = f.readline()
-                # 做个标记位，测试用
-                num = 0
-                cur = 0
-                # 定义一个list记录当前数组
-                sudoku = []
-                while line:
-                    if(line[0] != '\n' and num != 9):
-                        # 将每一行转成数字
-                        line = [int(i) for i in line if str.isdigit(i)]
-                        # print(line)
-                        sudoku.append(deepcopy(line))
-                        # print(num)
-                        num += 1
-                        line = f.readline()
-                    # 已经收集了一个数独
-                    elif num == 9 or line[0] == '\n':
-                        line = f.readline()
-                        num = 0
-                        print(cur)
-                        cur += 1
-                        sudo = sudo_solve.Solve_sudo(sudoku)
-                        # sudo = test.Solve_sudo(sudoku)
-                        print(u"完成，猜测了%s次" % sudo.guess_times)
-                        print("time: %.4f" % sudo.runtime)
-                        # print(sudo.value)
-                        sudoku = []
-                # 最后一个
-                sudo = sudo_solve.Solve_sudo(sudoku)
-                # sudo = test.Solve_sudo(sudoku)
-                print(u"完成，猜测了%s次" % sudo.guess_times)
-                end = time.process_time()
-                # print(sudo.value)
-                print("running time is %6.4f" % (end-start))
-
+            start = time.time()
+            sudoku_solve.Solve_sudo(path)
+            end = time.time()
+            print("running time: %.4f" % (end-start))
 
     except ValueError:
         print("please input correct number")

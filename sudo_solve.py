@@ -1,44 +1,38 @@
-#coding=utf
+#coding=utf-8
 #owner: IFpop
-#time: 2019/12/21
+#time: 2019/12/25
+'''
+排除候选猜测法
+- 唯一解法
+- 基础摒弃法
+- 隐性唯一候选法
+- 候选数区块减法
+'''
 
 import numpy as np
 from queue import Queue, LifoQueue
 from copy import deepcopy
 import time
+import array
 
+'''
+存储需要猜测点的信息
+'''
 class Recorder:
     point = None  # 进行猜测的点
-    point_index = 0  # 猜测候选列表使用的值的索引
-    value = None  # 回溯记录的值
+    pindex = 0   # 猜测候选列表使用的值的索引
+    cur_value = None # 回溯记录的值
 
+class SudoKu:
+    def __init__(self,data:list)->None:
+        self.sudoku = np.array(data) #数据初始化
+        self.value =np.array([[0] * 9] * 9, dtype=object) #当前数独初始化
+        self.runtime = 0 #初始化运行时间
+        self.know_points = Queue() #先进先出，新解(已解决值)的点对
+        self.recorder = LifoQueue() #先进后出，回溯器
+        self.guess_times = 0
 
-class Solve_sudo:
-    '''
-    Solve sudoku class:
-         def __init__
-         def sudo_solve
-         def sudo_exclude
-    '''
-    def __init__(self, data):
-        # 将data进行整理
-        self.sudoku = np.array(data)
-        self.runtime = 0
-
-        # 数据初始化(二维的object数组)
-        self.value = np.array([[0] * 9] * 9, dtype=object)  # 数独的值，包括未解决和已解决的
-        self.know_points = Queue()  # 先进先出，新解（已解决值）的坐标
-        self.recorder = LifoQueue()  # 先进后出，回溯器
-
-        self.recorder_point = None     #进行猜测的点
-        self.recorder_point_index = 0  #猜测候选列表使用的值的索引
-        self.recorder_value = None     #回溯记录的值
-        self.guess_times = 0  # 猜测次数
-
-        # 九宫格的基准元组，将列表变为元组会使速度上升
-        self.base_points = ((0,0),(0,3),(0,6),(3,0),(3,3),(3,6),(6,0),(6,3),(6,6))
-
-        # 对数独进行处理
+         # 对数独进行处理
         for row in range(9):
             for col in range(9):
                 if self.sudoku[row][col]:  # 如果是已确定点
@@ -47,12 +41,75 @@ class Solve_sudo:
                     self.know_points.put((row, col))
                 else:
                     self.value[row][col] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-        # print(self.value)
+
+class Solve_sudo:
+    '''
+    Solve sudo class:
+    - init          #初始化
+    - sudoku_solve  #解决数独
+    - sudo_exclude  #排除候选值
+    '''
+    def __init__(self,filepath:str)->None:
+        #先将所有的答案记录下来，最后一起存储
+        ans = []
+        # 建立buf缓存区
+        buf = ""
+
+        # 九宫格的基准元组，将列表变为元组会使速度上升
+        self.base_points = ((0,0),(0,3),(0,6),(3,0),(3,3),(3,6),(6,0),(6,3),(6,6))
+        # 打开文件
+        with open(filepath, 'r') as f:
+            line = f.readline()
+            num = 0  #记录当前是否是第九行
+            cur = 0  #记录当前个数
+            temp = []
+            while line:
+                if(line[0] != '\n' and num != 9):
+                    line = [int(i) for i in line if str.isdigit(i)]
+                    temp.append(deepcopy(line))
+                    num += 1
+                    line = f.readline()
+                # 已经收集了一个数独
+                elif num == 9 or line[0] == '\n':
+                    line = f.readline()
+                    num = 0
+                    print(cur)
+                    cur += 1
+                    self.current_sudoku = SudoKu(temp)
+                    start = time.time()
+                    self.sudo_solve()
+                    self.current_sudoku.value = self.current_sudoku.value.tolist()
+                    ans.append(self.current_sudoku.value)
+                    end = time.time()
+                    print("time is %.4f" % (end-start))
+                    temp = []
+        # 最后一个
+        self.current_sudoku = SudoKu(temp)  
         start = time.time()
         self.sudo_solve()
+        self.current_sudoku.value = self.current_sudoku.value.tolist()
+        ans.append(self.current_sudoku.value)
         end = time.time()
-        self.runtime = end -start
+        # print("time is %.4f" % (end-start))
 
+        # print(ans)
+        with open('sudoku.txt','w') as f:
+            for item in ans:
+                for index in range(9):
+                    f.write(("%s" % item[index])[1:-1].replace(', ',' '))
+                    f.write('\n')
+                f.write('\n')
+        f.close()
+        # for item in ans:
+        #     for index in range(9):
+        #         buf += str(item[index])[1:-1].replace(', ',' ')
+        #         buf += "\n"
+        #     buf += "\n"
+        # # print(buf)
+        # with open("sudoku.txt",'w+') as f:
+        #     f.write(buf)
+        # f.close()
+        
     #采用合适的算法，排除候选
     def sudo_exclude(self):
         type_same = True
@@ -61,11 +118,11 @@ class Solve_sudo:
         while type_same:
             while type_one:
                 # 剔除数字
-                while not self.know_points.empty():
-                    point = self.know_points.get()  # 先进先出
+                while not self.current_sudoku.know_points.empty():
+                    point = self.current_sudoku.know_points.get()  # 先进先出
                     self.remove_konw_num(point)
 
-                # 检查List里值为单个数字的情况，如有新answer则加入know_points Queue，立即cut_num
+                # 检查List里值为单个数字的情况，如有新answer则加入current_sudoku.know_points Queue，立即cut_num
                 type_one = self.Only_one_exisitence()
 
             # 检查同行或列的情况
@@ -79,34 +136,34 @@ class Solve_sudo:
         # 获取该点的横纵列坐标
         row, col = point
         # 通过坐标获取对应值
-        val = self.value[row, col]
+        val = self.current_sudoku.value[row, col]
 
         # 检查行
-        for i, item in enumerate(self.value[row]):
+        for i, item in enumerate(self.current_sudoku.value[row]):
             if(isinstance(item, list)):
                 # 统计该点在该行出现的次数
                 if(item.count(val)):
                     item.remove(val)  # 移除
                     # 判断移除后，是否剩下一个元素
                     if(len(item) == 1):
-                        self.know_points.put((row, i))  # 添加该坐标到已解决
-                        self.value[row][i] = item[0]
+                        self.current_sudoku.know_points.put((row, i))  # 添加该坐标到已解决
+                        self.current_sudoku.value[row][i] = item[0]
         # 检查列
-        for i, item in enumerate(self.value[:, col]):
+        for i, item in enumerate(self.current_sudoku.value[:, col]):
             if isinstance(item, list):
                 if item.count(val):
                     item.remove(val)
 
                     # 判断移除后，是否剩下一个元素
                     if len(item) == 1:
-                        self.know_points.put((i, col))
-                        self.value[i][col] = item[0]
+                        self.current_sudoku.know_points.put((i, col))
+                        self.current_sudoku.value[i][col] = item[0]
         # 检查九宫格
         # 先找到九宫格基准点，也就是3×3数组的左上角的点
         bp_row, bp_col = map(lambda x: x // 3 * 3, point)
         # print(bp_row, bp_col)
         # 在3×3的矩阵里进行排除
-        for m_r, row in enumerate(self.value[bp_row:bp_row + 3, bp_col:bp_col + 3]):
+        for m_r, row in enumerate(self.current_sudoku.value[bp_row:bp_row + 3, bp_col:bp_col + 3]):
             for m_c, item in enumerate(row):
                 if(isinstance(item, list)):
                     if(item.count(val)):
@@ -116,8 +173,8 @@ class Solve_sudo:
                         if len(item) == 1:
                             r = bp_row + m_r
                             c = bp_col + m_c
-                            self.know_points.put((r, c))
-                            self.value[r][c] = item[0]
+                            self.current_sudoku.know_points.put((r, c))
+                            self.current_sudoku.value[r][c] = item[0]
 
     '''
     For a class that can directly determine other rows, columns or nine palace cells, the point can be directly determined
@@ -126,40 +183,40 @@ class Solve_sudo:
         # 同一行只有一个数字的情况
         for row in range(9):
             # 只取出的是这一行是list格子
-            vals = list(filter(lambda x: isinstance(x, list), self.value[row]))
+            vals = list(filter(lambda x: isinstance(x, list), self.current_sudoku.value[row]))
             # print(val) #得到该行的所有可能性的二维数组
-            for col, item in enumerate(self.value[row]):
+            for col, item in enumerate(self.current_sudoku.value[row]):
                 if(isinstance(item, list)):
                     for value in item:  # 对其中的每个元素判断，如果只出现一次则确定
                         if(sum(map(lambda x: x.count(value), vals)) == 1):
-                            self.value[row][col] = value
-                            self.know_points.put((row, col))
+                            self.current_sudoku.value[row][col] = value
+                            self.current_sudoku.know_points.put((row, col))
                             return True
         # 对于列
         for col in range(0, 9):
             vals = list(
-                filter(lambda x: isinstance(x, list), self.value[:, col]))
+                filter(lambda x: isinstance(x, list), self.current_sudoku.value[:, col]))
 
-            for row, item in enumerate(self.value[:, col]):
+            for row, item in enumerate(self.current_sudoku.value[:, col]):
                 if(isinstance(item, list)):
                     for value in item:
                         if(sum(map(lambda x: x.count(value), vals)) == 1):
-                            self.value[row][col] = value
-                            self.know_points.put((row, col))
+                            self.current_sudoku.value[row][col] = value
+                            self.current_sudoku.know_points.put((row, col))
                             return True
 
         # 对于九宫格
         for row, col in self.base_points:
             # reshape: 3x3 改为1维数组
             vals = list(filter(lambda x: isinstance(x, list),
-                               self.value[row:row + 3, col:col + 3].reshape(1, -1)[0]))
-            for m_r, rows in enumerate(self.value[row:row + 3, col:col + 3]):
+                               self.current_sudoku.value[row:row + 3, col:col + 3].reshape(1, -1)[0]))
+            for m_r, rows in enumerate(self.current_sudoku.value[row:row + 3, col:col + 3]):
                 for m_c, item in enumerate(rows):
                     if(isinstance(item, list)):
                         for value in item:
                             if(sum(map(lambda x: x.count(value), vals)) == 1):
-                                self.value[row + m_r, col + m_c] = value
-                                self.know_points.put((row + m_r, col + m_c))
+                                self.current_sudoku.value[row + m_r, col + m_c] = value
+                                self.current_sudoku.know_points.put((row + m_r, col + m_c))
                                 return True
 
     '''
@@ -167,7 +224,7 @@ class Solve_sudo:
     '''
     def Hidden_exclusion(self):
         for bp_r, bp_c in self.base_points:
-            block = self.value[bp_r:bp_r + 3, bp_c:bp_c + 3]
+            block = self.current_sudoku.value[bp_r:bp_r + 3, bp_c:bp_c + 3]
 
             # 判断数字1~9在该九宫格的分布情况,reshape变为一维
             _data = block.reshape(1, -1)[0]
@@ -190,15 +247,15 @@ class Solve_sudo:
 
                         for col in range(0, 9):
                             if not col in result:
-                                item = self.value[row, col]
+                                item = self.current_sudoku.value[row, col]
                                 if isinstance(item, list):
                                     if item.count(i):
                                         item.remove(i)
 
                                         # 判断移除后，是否剩下一个元素
                                         if len(item) == 1:
-                                            self.know_points.put((row, col))
-                                            self.value[row, col] = item[0]
+                                            self.current_sudoku.know_points.put((row, col))
+                                            self.current_sudoku.value[row, col] = item[0]
                                             return True
                     elif len(set(cols)) == 1:
                         # 同一列
@@ -208,15 +265,15 @@ class Solve_sudo:
 
                         for row in range(0, 9):
                             if not row in result:
-                                item = self.value[row, col]
+                                item = self.current_sudoku.value[row, col]
                                 if isinstance(item, list):
                                     if item.count(i):
                                         item.remove(i)
 
                                         # 判断移除后，是否剩下一个元素
                                         if len(item) == 1:
-                                            self.know_points.put((row, col))
-                                            self.value[row, col] = item[0]
+                                            self.current_sudoku.know_points.put((row, col))
+                                            self.current_sudoku.value[row, col] = item[0]
                                             return True
                     
         
@@ -236,14 +293,14 @@ class Solve_sudo:
     def get_point_score(self,point):
         # 评分标准 (10-候选个数) + 同行确定数字个数 + 同列确定数字个数
         row, col = point
-        item = self.value[row][col]
+        item = self.current_sudoku.value[row][col]
 
         if isinstance(item, list):
             score = 10 - len(item)
-            for x in self.value[row]:
+            for x in self.current_sudoku.value[row]:
                 if(isinstance(x,int)):
                     score += 1
-            for x in self.value[:,col]:
+            for x in self.current_sudoku.value[:,col]:
                 if(isinstance(x,int)):
                     score += 1
             return score
@@ -254,7 +311,7 @@ class Solve_sudo:
     def check_value(self):
         #行
         r = 0
-        for row in self.value:
+        for row in self.current_sudoku.value:
             nums = []
             lists = []
             for item in row:
@@ -272,7 +329,7 @@ class Solve_sudo:
         for c in range(9):
             nums = []
             lists = []
-            col = self.value[:,c]
+            col = self.current_sudoku.value[:,c]
             for item in col:
                 if(isinstance(item,list)):
                     lists.append(item)
@@ -287,7 +344,7 @@ class Solve_sudo:
         for b_r, b_c in self.base_points:
             nums = []
             lists = []
-            block = self.value[b_r:b_r + 3, b_c:b_c + 3].reshape(1, -1)[0]
+            block = self.current_sudoku.value[b_r:b_r + 3, b_c:b_c + 3].reshape(1, -1)[0]
 
             for item in block:
                 if(isinstance(item,list)):
@@ -306,24 +363,24 @@ class Solve_sudo:
         recorder = Recorder()
         recorder.point = point
         recorder.point_index = index
-        # recorder.value = self.value.copy() #numpy的copy不行
-        recorder.value = deepcopy(self.value)
-        self.recorder.put(recorder)
-        self.guess_times += 1  # 记录猜测次数
+        # recorder.value = self.current_sudoku.value.copy() #numpy的copy不行
+        recorder.value = deepcopy(self.current_sudoku.value)
+        self.current_sudoku.recorder.put(recorder)
+        self.current_sudoku.guess_times += 1  # 记录猜测次数
 
         # 新一轮的排除处理
-        item = self.value[point]
+        item = self.current_sudoku.value[point]
         # assume only 1 in this point
-        self.value[point] = item[index]
-        self.know_points.put(point)
+        self.current_sudoku.value[point] = item[index]
+        self.current_sudoku.know_points.put(point)
         self.sudo_exclude()
     
     def reback(self):
         while True:
-            if(self.recorder.empty()):
+            if(self.current_sudoku.recorder.empty()):
                 raise Exception('Sudoku is wroing, no answer!')
             else:
-                recorder = self.recorder.get()
+                recorder = self.current_sudoku.recorder.get()
                 point = recorder.point
                 index = recorder.point_index+1
                 item = recorder.value[point]
@@ -333,7 +390,7 @@ class Solve_sudo:
                 if(index < len(item)):
                     break
                 #if exceed,pop next recorder
-        self.value = recorder.value
+        self.current_sudoku.value = recorder.value
         self.record_guess(point,index)
 
     #main function解题
@@ -344,7 +401,7 @@ class Solve_sudo:
         while True:
             if(self.check_value()):
                 fixed_answer = 0
-                for i in self.value.reshape(1, -1)[0]:
+                for i in self.current_sudoku.value.reshape(1, -1)[0]:
                     if(isinstance(i,int)):
                         fixed_answer += 1
                 if(fixed_answer == 81):
