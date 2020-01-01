@@ -42,7 +42,7 @@ def main():
                 elif cmd[1] == 'h':
                     print_help()
             except ValueError:
-                print("please input correct number")
+                print("please input correct number")    
             except IOError:
                 print("Error: Not find or open failed!")
 
