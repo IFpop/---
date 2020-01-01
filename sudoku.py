@@ -27,10 +27,10 @@ def main():
             start = time.process_time()
             # 第二个参数应该是数独文件路径
             path = sys.argv[2]
-            start = time.time()
-            sudoku_solve.Solve_sudo(path)
-            end = time.time()
-            print("running time: %.4f" % (end-start))
+            # start = time.time()
+            sudo_solve.Solve_sudo(path)
+            # end = time.time()
+            # print("running time: %.4f" % (end-start))
 
     except ValueError:
         print("please input correct number")
