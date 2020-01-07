@@ -10,11 +10,49 @@ from sudoku_faceForm import Ui_MainWindow
 from  Get_one_Sudoku import Get_one_Sudoku
 import os
 import numpy as np  
+import random
 import sys
+
+def Is_notZero(n):
+    if n != 0:
+        return True
+
+class MyStack(object):
+    def __init__(self):
+        self.stack_list = []
+        self.count = 0
+
+    # 创建一个栈
+    def create_stack(self):
+        return self.stack_list
+
+    # 栈中添加值
+    def push(self, value):
+        self.stack_list.insert(0,value)
+        self.count += 1
+
+    #返回栈顶元素值
+    def peek(self):
+        if self.count:
+            return self.stack_list[0]
+
+    # 删除栈顶元素
+    def pop(self):
+        self.stack_list.pop(0)
+        self.count -= 1
+
+    # 返回栈是否为空
+    def is_empty(self):
+        return self.count == 0
+
+    #打印栈内容
+    def print_all(self):
+        for sl in self.stack_list:
+            print(sl)
 
 class Face(QMainWindow):
     hoels = 0
-    num = 0
+    cur_sudoku_num = 0
     def __init__(self, parent=None):
         #游戏初始等级为1
         '''
@@ -27,16 +65,23 @@ class Face(QMainWindow):
         # 九宫格的基准元组
         self.base_points = ((0,0),(0,3),(0,6),(3,0),(3,3),(3,6),(6,0),(6,3),(6,6))
 
-        # 数独
+        # 用于记录现在界面上的数独
         self.sudoku =  np.array([[0] * 9] * 9, dtype=object)  # 数独的值，包括未解决和已解决的
+
+        # 使用堆栈实现上一步操作
+        self.last = MyStack()
 
         super(Face, self).__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setFixedSize(self.width(), self.height())
 
+        # 分别设置开始，上一步，下一步文本
         self.ui.start.setText("START")
-        self.ui.Ok.setText("DONE")
+        self.ui.Done.setText("DONE")
+        self.ui.Last.setText("LAST")
+        self.ui.Next.setText("NEXT")
+        # 初始选择难度为Easy
         self.ui.Level_state.setText("EASY")
         self.ui.Level_state.setReadOnly(True)
         self.ui.Level_state.setStyleSheet(
@@ -60,7 +105,9 @@ class Face(QMainWindow):
         
         # 链接按钮功能
         self.ui.start.clicked.connect(self.start_game)
-        self.ui.Ok.clicked.connect(self.check_value)
+        self.ui.Done.clicked.connect(self.Game_Done)
+        self.ui.Last.clicked.connect(self.Recover)
+        self.ui.Next.clicked.connect(self.Next_step)
 
         # 菜单功能
         self.ui.actionEasy.triggered.connect(self.change_easy)
@@ -97,10 +144,7 @@ class Face(QMainWindow):
             Pic_state = QMovie("./Pic/Good.gif")
             self.ui.Check_state.setMovie(Pic_state)
             Pic_state.start()
-        # 游戏失败
-        else:
-            Pic_state = QPixmap("./Pic/false.png")
-            self.ui.Check_state.setPixmap(Pic_state)
+     
 
     def change_easy(self):
         self.level = 1
@@ -119,17 +163,20 @@ class Face(QMainWindow):
         self.Put_pic(1)
         self.ui.tableWidget.clearContents()
         # 获取一个数独
-        self.num += 1
-        # print(self.num)
+        #self.cur_sudoku_num += 1
+        # print(self.cur_sudoku_num)
         temp = Get_one_Sudoku(self.level)
+        # 用于记录所获取的数独终局
+        self.oldsudoku = temp.oldsudoku
         for i in range(9):
             for j in range(9):
                 if(temp.sudoku[i][j] != 0):
                     item = QTableWidgetItem(str(temp.sudoku[i][j]))
                     item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
                     self.ui.tableWidget.setItem(i,j,item)
+                    self.sudoku[i][j] = temp.sudoku[i][j]
                 else:
-                     item = QTableWidgetItem()
+                     item = QTableWidgetItem("")
                      item.setBackground(QBrush(QColor(0, 255, 0)))
                      self.ui.tableWidget.setItem(i,j,item)
 
@@ -137,69 +184,89 @@ class Face(QMainWindow):
         self.ui.surplus.setText(str(self.hoels))  # 剩余的空格数
         # 动态更新holes的值
         self.ui.tableWidget.itemChanged.connect(self.working)
+        return True
 
-    def check_value(self):
-        # 还未完成所有空格
-        if(self.hoels != 0):
+    def Game_Done(self):
+        if(self.hoels > 0):
             QMessageBox.warning(self,"Warning","You haven't finished Sudoku yet")
-            for i in range(9):
-                for j in range(9):
-                    if len(self.ui.tableWidget.item(i,j).text()) == 0:
-                        # 将检测到的所有的空的标红
-                        item = QTableWidgetItem()
-                        item.setBackground(QBrush(QColor(255, 0, 0)))
-                        self.ui.tableWidget.setItem(i,j,item)
-                        self.Put_pic(1)
-                    else:
-                       self.sudoku[i][j] = (int(self.ui.tableWidget.item(i,j).text()))
             return
-        #print(temp) 
         # 判断行
         for row in range(9):
             temp_tuple = tuple(self.sudoku[row])
-            if(set(temp_tuple) != 9):
-                # QMessageBox.warning(self,"Message","You are wrong")
-
-                self.Put_pic(3)
-                # return
-
-
+            if len(set(temp_tuple)) != len(temp_tuple):
+                self.Put_pic(2)
+                QMessageBox.warning(self,"Warning","There are some problems")
         # 判断列
         for col in range(9):
-            temp_tuple = self.sudoku[:,col]
-            if(set(temp_tuple) != 9):
-                # QMessageBox.warning(self,"Message","You are wrong")
-                self.Put_pic(3)
-                # return
+            temp_tuple = tuple(self.sudoku[:,col])
+            if len(set(temp_tuple)) != len(temp_tuple):
+               self.Put_pic(2)
+               QMessageBox.warning(self,"Warning","There are some problems")
         
         # 九宫格
         # 先找到九宫格基准点，也就是3×3数组的左上角的点
         for bp in self.base_points:
-            vals = list(self.sudoku[bp[0]:bp[0] + 3, bp[1]:bp[1] + 3].reshape(1, -1)[0])
-            if(set(vals) != 9):
-                # QMessageBox.warning(self,"Message","You are wrong")
-                self.Put_pic(3)
-                # return
+            temp_tuple = tuple(self.sudoku[bp[0]:bp[0] + 3, bp[1]:bp[1] + 3].reshape(1, -1)[0])
+            if len(set(temp_tuple)) != len(temp_tuple):
+               self.Put_pic(2)
+               QMessageBox.warning(self,"Warning","There are some problems")
 
-        # 现在该程序尚未结束，就证明游戏成功完成
         self.Put_pic(2)
         QMessageBox.warning(self,"Message","Congratulations on your success")
-    
-    def check(self,row,col,item):
+
+    def Recover(self):
+        row,col = self.last.peek()
+        # print(self.last.peek())
+        self.last.pop()
+        item = QTableWidgetItem("")
+        item.setBackground(QBrush(QColor(0, 255, 0)))
+        self.ui.tableWidget.setItem(row,col,item)
+        self.sudoku[row][col] = self.oldsudoku[row][col]
+
+    def Next_step(self):
+        # 没有空格数，所以游戏结束，开始查看总体,这时下一步相当于Done
+        if(self.hoels < 1):
+            self.Game_Done()
+        num = random.randint(1,self.hoels)  #随机从第一个空格到最后一个空给出随机数，然后将此空补上
+        for row in range(9):
+            for col in range(9):
+                if(self.sudoku[row][col] == 0):
+                    num -= 1
+                    if(num == 0):
+                        item = QTableWidgetItem(str(self.oldsudoku[row][col]))
+                        self.ui.tableWidget.setItem(row,col,item)
+                        self.sudoku[row][col] = self.oldsudoku[row][col]
+        # self.last.print_all()
+
+    def check_value(self,row,col)->bool:
         bp_r = int(row/3)*3
         bp_c = int(col/3)*3
 
         # 对行进行判断
-        temp_tuple = tuple(self.sudoku[row])
+        temp_tuple = tuple(filter(Is_notZero,self.sudoku[row]))
         # 不满足数独条件就将空格颜色置为红色
-        if len(set(temp_tuple)) != 9:
-            item.setBackground(QBrush(QColor(255, 0, 0)))
+        # print(temp_tuple)
+        # print(len(set(temp_tuple)) != len(temp_tuple))
+        if len(set(temp_tuple)) != len(temp_tuple):
+            return False
+       
+        # 对列进行判断
+        temp_tuple = tuple(filter(Is_notZero,self.sudoku[:,col]))
+        # print(temp_tuple)
+        # print(len(set(temp_tuple)) != len(temp_tuple))
+        if len(set(temp_tuple)) != len(temp_tuple):
+            return False
+        # 对九宫格进行判断
+        temp_tuple = tuple(filter(Is_notZero,self.sudoku[bp_r:bp_r + 3, bp_c:bp_c + 3].reshape(1, -1)[0]))
+        # print(temp_tuple)
+        # print(len(set(temp_tuple)) != len(temp_tuple))
+        if len(set(temp_tuple)) != len(temp_tuple):
+            return False
+        return True
     # 动态计算空的个数
     def working(self,item):
         temp_row = item.row()
         temp_column = item.column()
-        
-
         # 不是 ""
         if(len(item.text()) != 0):
             # 是个数字
@@ -212,8 +279,14 @@ class Face(QMainWindow):
                         # 更新剩余的空格数
                         self.ui.surplus.setText(str(self.hoels))
                         self.sudoku[temp_row][temp_column] = int(item.text())
-                    # 其他情况只需要改一下颜色就行
-                    item.setBackground(QBrush(QColor(255, 255, 255)))
+                        self.last.push((temp_row,temp_column))
+                        check_bool = self.check_value(temp_row,temp_column)
+                        if check_bool:
+                            #将颜色改成白色
+                            item.setBackground(QBrush(QColor(255, 255, 255)))
+                        else:
+                            #将颜色改成红色
+                            item.setBackground(QBrush(QColor(255, 0, 0)))
                 else:
                     # QMessageBox.warning(self,"Warning","Invalid Input")
                     # 这里会将函数调用两次，因为颜色改变

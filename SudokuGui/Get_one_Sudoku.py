@@ -15,6 +15,7 @@ class Get_one_Sudoku():
         num = random.randint(0,100)  # 从一百个中随机挑一个
         sudokus = sudoku_generate.create_sudoku(120)#生成一百个终局
         # print(num)
+        self.oldsudoku = deepcopy(sudokus.perm[num])
         self.sudoku = deepcopy(sudokus.perm[num])
         #print(sudokus.perm[1])
         self.Remove_base_point()
