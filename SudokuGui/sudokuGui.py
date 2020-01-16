@@ -1,7 +1,9 @@
 #coding=utf-8
 #owner: IFpop
 #time: 2020/1/2
-
+'''
+- 这是界面的主控函数
+'''
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -16,7 +18,9 @@ import sys
 def Is_notZero(n):
     if n != 0:
         return True
-
+'''
+- 定义一个栈的类，方便存储输入步数，进行返回操作
+'''
 class MyStack(object):
     def __init__(self):
         self.stack_list = []
@@ -50,6 +54,10 @@ class MyStack(object):
         for sl in self.stack_list:
             print(sl)
 
+'''
+- 主窗口界面类
+- 用于显示界面，以及各类功能的实现
+'''
 class Face(QMainWindow):
     hoels = 0
     cur_sudoku_num = 0
@@ -64,9 +72,6 @@ class Face(QMainWindow):
 
         # 九宫格的基准元组
         self.base_points = ((0,0),(0,3),(0,6),(3,0),(3,3),(3,6),(6,0),(6,3),(6,6))
-
-        # 用于记录现在界面上的数独
-        self.sudoku =  np.array([[0] * 9] * 9, dtype=object)  # 数独的值，包括未解决和已解决的
 
         # 使用堆栈实现上一步操作
         self.last = MyStack()
@@ -118,7 +123,10 @@ class Face(QMainWindow):
         datetime = QDateTime.currentDateTime()
         text = datetime.toString()
         self.ui.time.setText("   "+ text)
-        
+
+    '''
+    显示当前系统时间
+    '''   
     def GetCurtime(self):
         # 设置label属性
         self.ui.time.setStyleSheet("QLabel{color:rgb(0,0,0);font-size:15px;font-weight:bold;font-family:宋体;}")
@@ -127,6 +135,9 @@ class Face(QMainWindow):
         timer.timeout.connect(self.showtime)
         timer.start()
 
+    '''
+    显示状态的图片
+    '''
     def Put_pic(self,game_state):
         # 尚未开始游戏
         if(game_state == 0):
@@ -145,22 +156,38 @@ class Face(QMainWindow):
             self.ui.Check_state.setMovie(Pic_state)
             Pic_state.start()
      
-
+    '''
+    将难度改为Easy以及level改为1，并在框中显示字符
+    '''
     def change_easy(self):
         self.level = 1
         self.ui.Level_state.setText("EASY")
-
+    
+    '''
+    将难度改为medium以及level改为2，并在框中显示字符
+    '''
     def change_medium(self):
         self.level = 2
         self.ui.Level_state.setText("MEDIUM")
 
+    '''
+    将难度改为hard以及level改为3，并在框中显示字符
+    '''
     def change_hard(self):
         self.level = 3
         self.ui.Level_state.setText("HARD")
-
+    
+    '''
+    使用按钮进行链接此函数，当第一次点击开始时，会将START改为RESTART
+    调用Get_one_sudoku模块中的获取类，得到当前数独，进行界面初始化处理
+    并将表格中数据的变化，链接到working函数，进行实时更新空闲个数
+    '''
     def start_game(self):
         self.ui.start.setText('RESTART')
         self.Put_pic(1)
+        # 用于记录现在界面上的数独
+        self.sudoku =  np.array([[0] * 9] * 9, dtype=object)  # 数独的值，包括未解决和已解决的
+
         self.ui.tableWidget.clearContents()
         # 获取一个数独
         #self.cur_sudoku_num += 1
@@ -181,11 +208,16 @@ class Face(QMainWindow):
                      self.ui.tableWidget.setItem(i,j,item)
 
         self.hoels = temp.hoels
+        # print(self.hoels)
         self.ui.surplus.setText(str(self.hoels))  # 剩余的空格数
         # 动态更新holes的值
         self.ui.tableWidget.itemChanged.connect(self.working)
         return True
 
+    '''
+    此函数用于判断游戏是否结束
+    分别判断行、列以及九宫格是否正确
+    '''
     def Game_Done(self):
         if(self.hoels > 0):
             QMessageBox.warning(self,"Warning","You haven't finished Sudoku yet")
@@ -214,6 +246,10 @@ class Face(QMainWindow):
         self.Put_pic(2)
         QMessageBox.warning(self,"Message","Congratulations on your success")
 
+    '''
+    此函数用于恢复上一步，用于LAST按钮链接
+    通过堆栈，将之前填入的点数存储起来，最后进行恢复
+    '''
     def Recover(self):
         row,col = self.last.peek()
         # print(self.last.peek())
@@ -223,21 +259,34 @@ class Face(QMainWindow):
         self.ui.tableWidget.setItem(row,col,item)
         self.sudoku[row][col] = self.oldsudoku[row][col]
 
+    '''
+    此函数用于提示下一步，用于NEXT按钮链接
+    通过oldsudoku以及随机数，随机填入一个未填入的数字，完成提示功能
+    开始事先需要判断空格个数是否为0，如果是，那么此时就应该进行游戏判断
+    否则，就随机填入一个数
+    '''
     def Next_step(self):
         # 没有空格数，所以游戏结束，开始查看总体,这时下一步相当于Done
         if(self.hoels < 1):
             self.Game_Done()
-        num = random.randint(1,self.hoels)  #随机从第一个空格到最后一个空给出随机数，然后将此空补上
-        for row in range(9):
-            for col in range(9):
-                if(self.sudoku[row][col] == 0):
-                    num -= 1
-                    if(num == 0):
-                        item = QTableWidgetItem(str(self.oldsudoku[row][col]))
-                        self.ui.tableWidget.setItem(row,col,item)
-                        self.sudoku[row][col] = self.oldsudoku[row][col]
+        else:
+            num = random.randint(1,self.hoels)  #随机从第一个空格到最后一个空给出随机数，然后将此空补上
+            # print(num)
+            # print(self.sudoku)
+            # print(self.oldsudoku)
+            for row in range(9):
+                for col in range(9):
+                    if(self.sudoku[row][col] == 0):
+                        num -= 1
+                        if(num == 0):
+                            item = QTableWidgetItem(str(self.oldsudoku[row][col]))
+                            self.ui.tableWidget.setItem(row,col,item)
+                            self.sudoku[row][col] = self.oldsudoku[row][col]
         # self.last.print_all()
 
+    '''
+    检测当前填入的值是否正确，被working函数引用，用于动态判断
+    '''
     def check_value(self,row,col)->bool:
         bp_r = int(row/3)*3
         bp_c = int(col/3)*3
@@ -263,6 +312,12 @@ class Face(QMainWindow):
         if len(set(temp_tuple)) != len(temp_tuple):
             return False
         return True
+    
+    '''
+    这是working函数，当填入数字时会被触发
+    触发后，会判断是否填入有效值
+    如果填入错误，就会报出错误，并将界面单元格变红，否则就变为白色
+    '''
     # 动态计算空的个数
     def working(self,item):
         temp_row = item.row()
@@ -299,11 +354,6 @@ class Face(QMainWindow):
                 item.setText("")
                 return
         
-        
-
-
-
-
 if __name__ == "__main__":
         app = QApplication(sys.argv)
         myapp = Face()

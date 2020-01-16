@@ -2,6 +2,10 @@
 #owner: IFpop
 #time: 2019/12/19
 
+'''
+这是未使用cython优化的代码
+'''
+
 import numpy as np
 
 # 先确定左上角的数字为5
@@ -42,7 +46,7 @@ move_way = (
 
 
 class create_sudoku:
-    def __init__(self, num):
+    def __init__(self, num:int)->None:
         # 生成初始的第一行1-9
         self.sudo_num = list(range(1, 10))
         # 将学号移动到前列
@@ -54,7 +58,7 @@ class create_sudoku:
         self.num = num
         self.create()
 
-    def create(self):
+    def create(self)->None:
          # print("num:"+str(num))
         while self.cur < self.num:
             # 记录第一行
@@ -63,7 +67,10 @@ class create_sudoku:
             self.get_sudoku()
         self.write2file()
 
-    def write2file(self):
+    '''
+    写入文件
+    '''
+    def write2file(self)->None:
        # 写入文件
        with open("sudoku.txt", "w") as f:
            # print("write file...\n")
@@ -74,28 +81,27 @@ class create_sudoku:
                         '[', '').replace(']', '').replace(',', ''))
                f.write("\n")
 
-    def get_sudoku(self):
+    '''
+    获取数独，使用Move_way元组，遍历每一种变换，对当前的第一列进行变换
+    当遍历完后，通过nextPermutation重新生成第一排的全排列，直到生成指定数目
+    '''
+    def get_sudoku(self)->None:
         temp_row = []
         for i in move_way:
-            # print("Create sudoku "+str(self.cur))
             self.perm.append([])
-            # print("current change"+str(i))
             for j in range(9):
-                # print("first row:")
-                # print(self.first_row)
-                # print(i[j], end="")
                 temp_row = self.first_row[(
                     9-i[j]):9]+self.first_row[0:(9-i[j])]
-                # print(temp_row)
                 self.perm[self.cur].append(temp_row)
-            # print(self.cur)
-            # print(self.perm[self.cur])
             self.cur = self.cur + 1
             if self.cur == self.num:
                 break
             self.nextPermutation(self.sudo_num)
 
-    def nextPermutation(self, nums):
+    '''
+    获取下一个全排列
+    '''
+    def nextPermutation(self, nums:list)->None:
         if len(nums) < 2:
             return
         ind = len(nums) - 1
@@ -111,7 +117,7 @@ class create_sudoku:
                     self.traverse(nums, ind, len(nums) - 1)
                     return
 
-    def traverse(self, nums, start, end):
+    def traverse(self, nums:list, start:int, end:int):
         while start < end:
             nums[start], nums[end] = nums[end], nums[start]
             start += 1

@@ -93,25 +93,26 @@ class Solve_sudo:
         # print("time is %.4f" % (end-start))
 
         # print(ans)
-        with open('sudoku.txt','w') as f:
-            for item in ans:
-                for index in range(9):
-                    f.write(("%s" % item[index])[1:-1].replace(', ',' '))
-                    f.write('\n')
-                f.write('\n')
-        f.close()
-        # for item in ans:
-        #     for index in range(9):
-        #         buf += str(item[index])[1:-1].replace(', ',' ')
-        #         buf += "\n"
-        #     buf += "\n"
-        # # print(buf)
-        # with open("sudoku.txt",'w+') as f:
-        #     f.write(buf)
+        # with open('sudoku.txt','w') as f:
+        #     for item in ans:
+        #         for index in range(9):
+        #             f.write(("%s" % item[index])[1:-1].replace(', ',' '))
+        #             f.write('\n')
+        #         f.write('\n')
         # f.close()
+        for item in ans:
+            for index in range(9):
+                buf += str(item[index])[1:-1].replace(', ',' ')
+                buf += "\n"
+            buf += "\n"
+        # print(buf)
+        with open("sudoku.txt",'w+') as f:
+            f.write(buf)
+        f.close()
+        print("done")
         
     #采用合适的算法，排除候选
-    def sudo_exclude(self):
+    def sudo_exclude(self)->None:
         type_same = True
         type_one = True
 
@@ -132,7 +133,7 @@ class Solve_sudo:
     '''
     Remove the numbers in the candidate codes in the row, column and nine palace lattice according to each determined point
     '''
-    def remove_konw_num(self, point):
+    def remove_konw_num(self, point:tuple)->None:
         # 获取该点的横纵列坐标
         row, col = point
         # 通过坐标获取对应值
@@ -179,7 +180,7 @@ class Solve_sudo:
     '''
     For a class that can directly determine other rows, columns or nine palace cells, the point can be directly determined
     '''
-    def Only_one_exisitence(self):
+    def Only_one_exisitence(self)->None:
         # 同一行只有一个数字的情况
         for row in range(9):
             # 只取出的是这一行是list格子
@@ -222,7 +223,7 @@ class Solve_sudo:
     '''
     Invisible elimination of the same row in the nine palace grid
     '''
-    def Hidden_exclusion(self):
+    def Hidden_exclusion(self)->None:
         for bp_r, bp_c in self.base_points:
             block = self.current_sudoku.value[bp_r:bp_r + 3, bp_c:bp_c + 3]
 
@@ -278,7 +279,7 @@ class Solve_sudo:
                     
         
     #评分，找到最佳的猜测坐标
-    def get_best_point(self):
+    def get_best_point(self)->None:
         best_score = 0
         best_point = (0,0)
 
@@ -290,7 +291,7 @@ class Solve_sudo:
                     best_point = (row,col)
         return best_point
 
-    def get_point_score(self,point):
+    def get_point_score(self,point:tuple)->None:
         # 评分标准 (10-候选个数) + 同行确定数字个数 + 同列确定数字个数
         row, col = point
         item = self.current_sudoku.value[row][col]
@@ -308,7 +309,7 @@ class Solve_sudo:
             return 0
     
     #验证有没错误
-    def check_value(self):
+    def check_value(self)->bool:
         #行
         r = 0
         for row in self.current_sudoku.value:
@@ -358,7 +359,7 @@ class Solve_sudo:
         return True
     
     # 猜测记录
-    def record_guess(self, point, index=0):
+    def record_guess(self, point:tuple, index:int=0)->None:
         # 记录
         recorder = Recorder()
         recorder.point = point
@@ -375,7 +376,7 @@ class Solve_sudo:
         self.current_sudoku.know_points.put(point)
         self.sudo_exclude()
     
-    def reback(self):
+    def reback(self)->None:
         while True:
             if(self.current_sudoku.recorder.empty()):
                 raise Exception('Sudoku is wroing, no answer!')
@@ -394,7 +395,7 @@ class Solve_sudo:
         self.record_guess(point,index)
 
     #main function解题
-    def sudo_solve(self):
+    def sudo_solve(self)->None:
         #第一次解题，排除法
         self.sudo_exclude()
         #检查有没有错误，有错误则回溯，没错误却未解开题目，则再猜测

@@ -4,12 +4,11 @@
 
 import sudoku_generate
 import sudo_solve
-# import test
 from copy import deepcopy
 import sys
 import time
 
-def print_help():
+def print_help()->None:
     print("sudoku.exe [选项] 参数")
     print("选项：")
     print("    -c <数字>\t生成<数字>个数独终局至文件sudoku.txt")
@@ -20,30 +19,29 @@ def main():
     if len(sys.argv) != 3 or sys.argv[1] not in ['-c', '-s', '-h']:
         print_help()
     else:
-        while 1:
-            try:
-                cmd = sys.argv[1]
-                print("cmd:"+cmd)
-                # 如果是-c的话。就执行create
-                if cmd[1] == 'c':
-                    # 确定开始时间
-                    start = time.process_time()
-                    num = int(sys.argv[2])
-                    # 开始生成终局
-                    sudoku_generate.create_sudoku(num)
-                    # 确定结束时间
-                    end = time.process_time()
-                    print("running time is %6.4f" % (end-start))
-                elif cmd[1] == 's':
-                    start = time.process_time()
-                    # 第二个参数应该是数独文件路径
-                    path = sys.argv[2]
-                    sudo_solve.Solve_sudo(path)
-                elif cmd[1] == 'h':
-                    print_help()
-            except ValueError:
-                print("please input correct number")    
-            except IOError:
-                print("Error: Not find or open failed!")
+        try:
+            cmd = sys.argv[1]
+            print("cmd:"+cmd)
+            # 如果是-c的话。就执行create
+            if cmd[1] == 'c':
+                # 确定开始时间
+                start = time.process_time()
+                num = int(sys.argv[2])
+                # 开始生成终局
+                sudoku_generate.create_sudoku(num)
+                # 确定结束时间
+                end = time.process_time()
+                print("running time is %6.4f" % (end-start))
+            elif cmd[1] == 's':
+                start = time.process_time()
+                # 第二个参数应该是数独文件路径
+                path = sys.argv[2]
+                sudo_solve.Solve_sudo(path)
+            elif cmd[1] == 'h':
+                print_help()
+        except ValueError:
+            print("please input correct number")    
+        except IOError:
+            print("Error: Not find or open failed!")
 
 main()
