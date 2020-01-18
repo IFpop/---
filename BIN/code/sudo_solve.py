@@ -73,15 +73,15 @@ class Solve_sudo:
                 elif num == 9 or line[0] == '\n':
                     line = f.readline()
                     num = 0
-                    # print(cur)
+                    print(cur)
                     cur += 1
                     self.current_sudoku = SudoKu(temp)
-                    # start = time.time()
+                    start = time.time()
                     self.sudo_solve()
                     self.current_sudoku.value = self.current_sudoku.value.tolist()
                     ans.append(self.current_sudoku.value)
-                    # end = time.time()
-                    # print("time is %.4f" % (end-start))
+                    end = time.time()
+                    print("time is %.4f" % (end-start))
                     temp = []
         # print(cur)
         # 最后一个
@@ -91,7 +91,7 @@ class Solve_sudo:
         self.current_sudoku.value = self.current_sudoku.value.tolist()
         ans.append(self.current_sudoku.value)
         end = time.time()
-        # print("time is %.4f" % (end-start))
+        print("time is %.4f" % (end-start))
 
         # print(ans)
         # with open('sudoku.txt','w') as f:
