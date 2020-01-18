@@ -2,6 +2,9 @@
 #owner: IFpop
 #time: 2019/12/24
 
+'''
+这是cython优化之后的代码
+'''
 import sys
 import time
 from libc.stdio cimport FILE, fopen, fclose, fputs, fgets, feof, fputc
@@ -46,6 +49,7 @@ cdef class create_sudoku:
     cdef int cur            #用于生成全排列
     cdef int index          #进行缓存区计数
     cdef char buf[1000200]  #创建缓存区
+    cdef int sum            #记录num即需要生成的数独总数
 
     def __init__(self,num:int):
         #打开文件句柄
@@ -70,9 +74,10 @@ cdef class create_sudoku:
 
         #计时加运行
         cdef double start_time = time.time()
-        self.create(num)
+        self.sum = num
+        self.create()
         cdef double end_time = time.time()
-        print("running time: %.4f" % (end_time-start_time))
+        #print("running time: %.4f" % (end_time-start_time))
 
     '''
     将数独以字符串的形式写入缓存区
@@ -90,6 +95,8 @@ cdef class create_sudoku:
                     self.index += 1
                 self.buf[self.index] = sudoku[i][j] + 48 # 0
                 self.index += 1
+            if(n == self.sum-1 and i == 8):
+                return
             self.buf[self.index] = 10
             self.index += 1
         #print(len(self.buf)) 
@@ -123,13 +130,13 @@ cdef class create_sudoku:
     '''
     主控函数
     '''
-    cdef create(self,num:int):
+    cdef create(self):
         cdef int i
         cdef int tag  #当前全排列
         # 生成所有全排列
         self.permutation(self.sudo_num)
         # 0~num-1
-        for i in range(num-1):
+        for i in range(self.sum-1):
             tag = i % 40320 
             # 将数独生成后，写入缓存区
             self.write2buf(self.get_sudoku(i,self.perm[tag]),i)
@@ -138,7 +145,8 @@ cdef class create_sudoku:
                 self.buf[self.index] = 0
                 fputs(self.buf,self.Save_txt)
                 self.index = 0
-        tag = num % 40320
-        self.write2buf(self.get_sudoku(i,self.perm[tag]), num)
+        
+        tag = (self.sum-1) % 40320
+        self.write2buf(self.get_sudoku(i,self.perm[tag]), self.sum-1)
         fputs(self.buf, self.Save_txt)
         fclose(self.Save_txt)

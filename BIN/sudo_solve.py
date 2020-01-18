@@ -83,6 +83,7 @@ class Solve_sudo:
                     end = time.time()
                     print("time is %.4f" % (end-start))
                     temp = []
+        print(cur)
         # 最后一个
         self.current_sudoku = SudoKu(temp)  
         start = time.time()
@@ -100,19 +101,23 @@ class Solve_sudo:
         #             f.write('\n')
         #         f.write('\n')
         # f.close()
+        temp = 0
         for item in ans:
             for index in range(9):
                 buf += str(item[index])[1:-1].replace(', ',' ')
+                if(temp == cur and index == 8) != 1:
+                    buf += "\n"
+            if(temp != cur):
                 buf += "\n"
-            buf += "\n"
+            temp += 1
         # print(buf)
         with open("sudoku.txt",'w+') as f:
             f.write(buf)
         f.close()
-        print("done")
+        #print("done")
         
     #采用合适的算法，排除候选
-    def sudo_exclude(self)->None:
+    def sudo_exclude(self):
         type_same = True
         type_one = True
 
@@ -129,6 +134,8 @@ class Solve_sudo:
             # 检查同行或列的情况
             type_same = self.Hidden_exclusion()
             type_one = True
+        # 设置返回值，用于单元测试
+        return self.current_sudoku.value
 
     '''
     Remove the numbers in the candidate codes in the row, column and nine palace lattice according to each determined point
@@ -176,6 +183,9 @@ class Solve_sudo:
                             c = bp_col + m_c
                             self.current_sudoku.know_points.put((r, c))
                             self.current_sudoku.value[r][c] = item[0]
+
+        # 用于单元测试
+        return self.current_sudoku.value
 
     '''
     For a class that can directly determine other rows, columns or nine palace cells, the point can be directly determined
