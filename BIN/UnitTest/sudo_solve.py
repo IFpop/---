@@ -73,14 +73,14 @@ class Solve_sudo:
                 elif num == 9 or line[0] == '\n':
                     line = f.readline()
                     num = 0
-                    # print(cur)
+                    print(cur)
                     cur += 1
                     self.current_sudoku = SudoKu(temp)
-                    # start = time.time()
+                    start = time.time()
                     self.sudo_solve()
                     self.current_sudoku.value = self.current_sudoku.value.tolist()
                     ans.append(self.current_sudoku.value)
-                    # end = time.time()
+                    end = time.time()
                     # print("time is %.4f" % (end-start))
                     temp = []
         # print(cur)
@@ -183,14 +183,13 @@ class Solve_sudo:
                                 c = bp_col + m_c
                                 self.current_sudoku.know_points.put((r, c))
                                 self.current_sudoku.value[r][c] = item[0]
-
         # 用于单元测试
         return self.current_sudoku.value
 
     '''
     For a class that can directly determine other rows, columns or nine palace cells, the point can be directly determined
     '''
-    def Only_one_exisitence(self)->None:
+    def Only_one_exisitence(self)->bool:
         # 同一行只有一个数字的情况
         for row in range(9):
             # 只取出的是这一行是list格子
@@ -286,8 +285,6 @@ class Solve_sudo:
                                             self.current_sudoku.know_points.put((row, col))
                                             self.current_sudoku.value[row, col] = item[0]
                                             return True
-                    
-        
     #评分，找到最佳的猜测坐标
     def get_best_point(self)->None:
         best_score = 0
