@@ -59,7 +59,6 @@ class MyStack(object):
 - 用于显示界面，以及各类功能的实现
 '''
 class Face(QMainWindow):
-    hoels = 0
     cur_sudoku_num = 0
     def __init__(self, parent=None):
         #游戏初始等级为1
@@ -69,7 +68,7 @@ class Face(QMainWindow):
         3 —— HARD
         '''
         self.level = 1
-
+        self.hoels = -1
         # 九宫格的基准元组
         self.base_points = ((0,0),(0,3),(0,6),(3,0),(3,3),(3,6),(6,0),(6,3),(6,6))
 
@@ -106,6 +105,7 @@ class Face(QMainWindow):
         3 —— 失败
         '''
         # 初始为0
+        self.game_state = 0
         self.Put_pic(0)
         
         # 链接按钮功能
@@ -140,6 +140,7 @@ class Face(QMainWindow):
     '''
     def Put_pic(self,game_state):
         # 尚未开始游戏
+        self.game_state = game_state
         if(game_state == 0):
             # 设置状态图
             Pic_state = QMovie("./Pic/Original.gif")
@@ -251,13 +252,22 @@ class Face(QMainWindow):
     通过堆栈，将之前填入的点数存储起来，最后进行恢复
     '''
     def Recover(self):
+        # print(self.sudoku)
+        if(self.last.is_empty()):
+            QMessageBox.warning(self,"Message","You haven't started yet")
+            return
+        if(self.game_state == 2):
+            QMessageBox.warning(self,"Message","Please restart")
+            return 
         row,col = self.last.peek()
         # print(self.last.peek())
         self.last.pop()
         item = QTableWidgetItem("")
         item.setBackground(QBrush(QColor(0, 255, 0)))
         self.ui.tableWidget.setItem(row,col,item)
-        self.sudoku[row][col] = self.oldsudoku[row][col]
+        self.sudoku[row][col] = 0
+        self.hoels += 1
+        self.ui.surplus.setText(str(self.hoels))
 
     '''
     此函数用于提示下一步，用于NEXT按钮链接
@@ -266,6 +276,9 @@ class Face(QMainWindow):
     否则，就随机填入一个数
     '''
     def Next_step(self):
+        if(self.last.is_empty() and self.hoels < 0):
+            QMessageBox.warning(self,"Message","You haven't started yet")
+            return
         # 没有空格数，所以游戏结束，开始查看总体,这时下一步相当于Done
         if(self.hoels < 1):
             self.Game_Done()
